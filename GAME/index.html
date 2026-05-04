@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trò Chơi Bức Tranh Bí Ẩn - Hóa Học 12</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- MathJax for LaTeX support -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Lexend', sans-serif;
+            background-color: #f0f9ff;
+            color: #1e293b;
+            overflow: hidden;
+        }
+
+        .bright-gradient {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+        }
+
+        .gold-button {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        }
+
+        .bright-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        .tile-hidden {
+            background-color: #bae6fd;
+            border: 1px solid #7dd3fc;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tile-revealed {
+            opacity: 0;
+            transform: scale(0.5) rotate(15deg);
+            pointer-events: none;
+        }
+
+        .animate-fade { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #0ea5e9; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="h-screen w-screen flex flex-col">
+        <!-- TRANG CHỦ -->
+        <div id="screen-home" class="flex-1 flex flex-col items-center justify-center p-6 text-center relative overflow-y-auto">
+            <div class="mb-6 p-5 rounded-3xl bg-white shadow-xl border border-sky-100 animate-bounce">
+                <i data-lucide="flask-conical" class="w-16 h-16 text-sky-500"></i>
+            </div>
+            
+            <h1 class="text-3xl md:text-5xl font-extrabold mb-10 text-transparent bg-clip-text bright-gradient uppercase tracking-widest leading-tight">
+                THỬ THÁCH CARBOHYDRATE
+            </h1>
+            
+            <div class="space-y-4 w-full max-w-sm z-10">
+                <input type="text" id="student-name" placeholder="Nhập tên học sinh..." 
+                    class="w-full bg-white border-2 border-sky-100 rounded-2xl px-6 py-4 text-center focus:border-sky-400 focus:ring-4 focus:ring-sky-100 outline-none text-lg shadow-sm transition-all">
+                
+                <div class="flex flex-col gap-3">
+                    <button onclick="startAsStudent()" class="w-full py-4 gold-button text-white font-bold rounded-2xl shadow-lg hover:scale-105 transition flex items-center justify-center gap-2 text-xl">
+                        VÀO CHƠI NGAY <i data-lucide="play" class="fill-current"></i>
+                    </button>
+                    <button onclick="switchScreen('config')" class="w-full py-3 bg-white text-sky-600 font-bold rounded-2xl border-2 border-sky-100 hover:bg-sky-50 transition flex items-center justify-center gap-2 text-sm text-sky-500">
+                        <i data-lucide="image" class="w-4 h-4"></i> THAY ĐỔI ẢNH BÍ MẬT
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- THIẾT LẬP ẢNH -->
+        <div id="screen-config" class="hidden flex-1 p-6 flex items-center justify-center">
+            <div class="bright-card rounded-3xl p-8 max-w-md w-full animate-fade">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6 text-center">Tải ảnh bức tranh ẩn</h2>
+                <div class="bg-sky-50 p-6 rounded-2xl border border-sky-100 mb-8 text-center border-dashed border-2">
+                    <label class="block text-xs font-bold text-sky-600 uppercase mb-4 tracking-widest">Chọn ảnh (.png, .jpg)</label>
+                    <input type="file" id="input-image" accept="image/*" class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-sky-500 file:text-white font-bold cursor-pointer hover:file:bg-sky-600">
+                </div>
+                <button onclick="switchScreen('home')" class="w-full py-4 bright-gradient text-white font-bold rounded-2xl shadow-md">QUAY LẠI TRANG CHỦ</button>
+            </div>
+        </div>
+
+        <!-- MÀN HÌNH CHƠI -->
+        <div id="screen-game" class="hidden flex-1 flex flex-col lg:flex-row p-4 md:p-6 gap-6 overflow-hidden">
+            <!-- Bên trái: Câu hỏi -->
+            <div class="w-full lg:w-1/3 flex flex-col gap-4 h-full">
+                <div class="bright-card rounded-3xl p-5 flex-1 flex flex-col shadow-xl overflow-hidden">
+                    <div class="mb-4 flex justify-between items-center border-b border-slate-100 pb-3">
+                        <span class="px-4 py-1 bg-sky-100 text-sky-600 text-xs font-bold rounded-full" id="current-q-index">Câu 1/20</span>
+                        <div class="flex items-center gap-2 text-sky-500 font-bold" id="timer-display">
+                            <i data-lucide="clock" class="w-4 h-4"></i> 00:00
+                        </div>
+                    </div>
+                    
+                    <div id="question-container" class="flex-1 flex flex-col overflow-y-auto pr-2">
+                        <h3 id="display-q-text" class="text-base md:text-lg font-bold mb-6 text-slate-800 leading-snug">Đang tải...</h3>
+                        <div id="answer-zone" class="space-y-3"></div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <button id="btn-submit" onclick="submitAnswer()" class="w-full py-4 bright-gradient text-white font-bold rounded-2xl shadow-md transition disabled:opacity-40 text-lg">KIỂM TRA</button>
+                        <p id="feedback" class="mt-3 text-center font-bold text-base hidden p-3 rounded-xl"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bên phải: Ảnh lật ô -->
+            <div class="w-full lg:w-2/3 flex flex-col items-center justify-center relative h-full">
+                <div class="relative w-full max-w-[550px] aspect-square rounded-3xl overflow-hidden shadow-2xl border-8 border-white bg-white">
+                    <img id="game-image" src="" class="w-full h-full object-cover">
+                    <div id="tiles-overlay" class="absolute inset-0 grid"></div>
+                    
+                    <!-- Overlay Thắng -->
+                    <div id="win-message" class="absolute inset-0 flex items-center justify-center bg-white/95 hidden backdrop-blur-md z-50">
+                        <div class="text-center p-6 w-full max-w-sm animate-fade">
+                            <div class="mb-4 inline-block p-4 rounded-full bg-yellow-100 animate-bounce"><i data-lucide="trophy" class="w-12 h-12 text-yellow-500"></i></div>
+                            <h2 class="text-2xl font-extrabold text-slate-800 mb-2 uppercase tracking-tighter text-sky-600">XUẤT SẮC!</h2>
+                            <div class="grid grid-cols-2 gap-3 mb-6 mt-4">
+                                <div class="bg-sky-50 p-3 rounded-2xl border border-sky-100"><p class="text-sky-600 text-[10px] font-bold uppercase">Điểm số</p><p id="final-score" class="text-2xl font-bold">0</p></div>
+                                <div class="bg-amber-50 p-3 rounded-2xl border border-amber-100"><p class="text-amber-600 text-[10px] font-bold uppercase">Thời gian</p><p id="final-time" class="text-2xl font-bold">00:00</p></div>
+                            </div>
+                            <div class="bg-white rounded-2xl border border-slate-100 p-4 mb-6 shadow-sm text-left max-h-40 overflow-y-auto">
+                                <h3 class="text-[10px] font-bold text-slate-400 mb-3 uppercase tracking-widest text-center">Xếp hạng lớp</h3>
+                                <div id="leaderboard-body" class="space-y-2"></div>
+                            </div>
+                            <button onclick="location.reload()" class="px-8 py-3 gold-button text-white font-bold rounded-2xl w-full shadow-lg">LÀM LẠI</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 w-full max-w-[550px] flex items-center justify-between bg-white px-5 py-2 rounded-2xl shadow-sm">
+                    <div class="flex items-center gap-2 font-bold text-sky-600 text-xs">
+                        <i data-lucide="user" class="w-4 h-4"></i><span id="player-display-name">Người chơi</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-sky-50 px-3 py-1 rounded-full text-sky-600 font-bold text-xs">
+                        <i data-lucide="layers" class="w-3 h-3"></i><span id="tiles-status">0/100</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Config
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'chem-mystery-carb-latex';
+
+        // Bộ câu hỏi hỗ trợ LaTeX
+        const QUESTIONS = [
+            { type: 'mcq', text: 'Chất nào sau đây thuộc loại disaccharide?', options: ['glucose', 'fructose', 'saccharose', 'cellulose'], answer: '2' },
+            { type: 'mcq', text: 'Saccharose có nhiều trong cây mía, hoa thốt nốt. Công thức phân tử của nó là?', options: ['$C_6H_{12}O_6$', '$(C_6H_{10}O_5)_n$', '$C_{12}H_{22}O_{11}$', '$C_2H_4O_2$'], answer: '2' },
+            { type: 'mcq', text: 'Chất X có nhiều trong cây mía, nồng độ đạt tới 13%. Chất X là?', options: ['glucose', 'fructose', 'saccharose', 'maltose'], answer: '2' },
+            { type: 'mcq', text: 'Carbohydrate là những hợp chất hữu cơ loại nào?', options: ['đơn chức', 'đa chức', 'mạch hở', 'tạp chức'], answer: '3' },
+            { type: 'mcq', text: 'Phát biểu nào sau đây là ĐÚNG?', options: ['$C_n(H_2O)_m$ đều là carbohydrate', 'Disaccharide thủy phân tạo 1 monosaccharide', 'Monosaccharide là carbohydrate không bị thủy phân', 'Polysaccharide thủy phân tạo 2 monosaccharide'], answer: '2' },
+            { type: 'mcq', text: 'Nhận xét nào ĐÚNG về Carbohydrate?', options: ['Tất cả đều là $C_n(H_2O)_m$', 'Tất cả đều có công thức $C_n(H_2O)_m$', 'Đa số các carbohydrate có công thức chung $C_n(H_2O)_m$', 'Carbohydrate đều có ít nhất 6 carbon'], answer: '2' },
+            { type: 'mcq', text: 'Trong các chất: glucose, fructose, maltose, saccharose, tinh bột và cellulose. Có bao nhiêu monosaccharide?', options: ['1', '2', '3', '4'], answer: '1' },
+            { type: 'mcq', text: 'Phát biểu nào sau đây KHÔNG đúng?', options: ['Glucose mạch hở có 5 nhóm $-OH$', 'Fructose mạch hở có 1 nhóm ketone', 'Trong môi trường kiềm, glucose và fructose không chuyển hóa qua lại', 'Glucose và fructose chủ yếu ở dạng mạch vòng'], answer: '2' },
+            { type: 'mcq', text: 'Phản ứng nào KHÔNG chứng minh nhóm chức aldehyde của glucose?', options: ['Oxi hoá bằng thuốc thử Tollens', 'Oxi hoá bằng $Cu(OH)_2$ đun nóng', 'Lên men glucose bằng enzyme', 'Khử glucose bằng $H_2$ ($Ni, t^o$)'], answer: '2' },
+            { type: 'mcq', text: 'Chất nào sau đây KHÔNG phản ứng với thuốc thử Tollens?', options: ['Fructose', 'Glucose', 'Ethyl acetate', 'Acetaldehyde'], answer: '2' },
+            { type: 'mcq', text: 'Glucose và fructose đều có đặc điểm gì?', options: ['Có nhóm $-CHO$', 'Công thức $C_6H_{10}O_5$', 'Thuộc disaccharide', 'Có phản ứng tráng bạc'], answer: '3' },
+            { type: 'mcq', text: 'Phát biểu nào sau đây là ĐÚNG về Saccharose?', options: ['Gồm 2 đơn vị $\\beta$-glucose', 'Tồn tại mạch hở và mạch vòng', 'Là một polysaccharide', 'Phân tử không có nhóm $-OH$ hemiacetal'], answer: '3' },
+            { type: 'mcq', text: 'Chất nào sau đây KHÔNG tham gia phản ứng thủy phân?', options: ['Methyl acetate', 'Saccharose', 'Glucose', 'Triolein'], answer: '2' },
+            { type: 'mcq', text: 'Phát biểu nào sau đây KHÔNG đúng?', options: ['Thủy phân saccharose ra một loại monosaccharide', 'Saccharose chỉ có dạng mạch vòng', 'Maltose có nhiều trong mạch nha', 'Saccharose và maltose là disaccharide'], answer: '0' },
+            { type: 'mcq', text: 'Số chất phản ứng với saccharose trong dãy: $H_2/Ni$, $Cu(OH)_2/NaOH$, Tollens, $Br_2$?', options: ['2', '3', '1', '4'], answer: '2' },
+            { type: 'short', text: 'Số chất thuộc loại carbohydrate trong dãy: glycerol, glucose, ethanal, fructose, tinh bột, saccharose?', answer: '4' },
+            { type: 'short', text: 'Tổng số nguyên tử có trong một phân tử fructose ($C_6H_{12}O_6$) là?', answer: '24' },
+            { type: 'short', text: 'Ở dạng mạch hở, phân tử glucose có bao nhiêu nhóm hydroxy ($-OH$)?', answer: '5' },
+            { type: 'short', text: 'Lên men $m$ gam glucose tạo $10g$ kết tủa $CaCO_3$, dd giảm $3.4g$. Hiệu suất 90%. Giá trị $m$ là?', answer: '15' },
+            { type: 'short', text: 'V lít rượu vang $13,8^o$ thu được từ $16,8$ kg nho ($15\%$ glucose) với hiệu suất $60\%$ là?', answer: '7.1' }
+        ];
+
+        let state = {
+            idx: 0,
+            score: 0,
+            tilesRev: 0,
+            order: [],
+            timer: null,
+            startMs: null,
+            name: "",
+            ans: null,
+            img: "https://images.unsplash.com/photo-1532187875605-2fe35f74dece?auto=format&fit=crop&q=80&w=1000"
+        };
+
+        const initAuth = async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch(e) {}
+        };
+        initAuth();
+
+        window.switchScreen = s => {
+            document.querySelectorAll('#app > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById(`screen-${s}`).classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        document.getElementById('input-image').addEventListener('change', e => {
+            const f = e.target.files[0];
+            if (f) {
+                const r = new FileReader();
+                r.onload = ev => state.img = ev.target.result;
+                r.readAsDataURL(f);
+            }
+        });
+
+        window.startAsStudent = () => {
+            const n = document.getElementById('student-name').value.trim();
+            if (!n) return;
+            state.name = n;
+            document.getElementById('player-display-name').innerText = n;
+            startGame();
+        };
+
+        const startGame = () => {
+            state.idx = 0; state.score = 0; state.tilesRev = 0;
+            initTiles();
+            document.getElementById('game-image').src = state.img;
+            document.getElementById('win-message').classList.add('hidden');
+            switchScreen('game');
+            renderQuestion();
+            updateTileStatus();
+            startTimer();
+        };
+
+        const initTiles = () => {
+            const overlay = document.getElementById('tiles-overlay');
+            overlay.innerHTML = '';
+            overlay.style.gridTemplateColumns = `repeat(10, 1fr)`;
+            overlay.style.gridTemplateRows = `repeat(10, 1fr)`;
+            state.order = Array.from({length: 100}, (_, i) => i).sort(() => Math.random() - 0.5);
+            for (let i = 0; i < 100; i++) {
+                const t = document.createElement('div');
+                t.id = `tile-${i}`;
+                t.className = 'w-full h-full tile-hidden';
+                overlay.appendChild(t);
+            }
+        };
+
+        const startTimer = () => {
+            state.startMs = Date.now();
+            clearInterval(state.timer);
+            state.timer = setInterval(() => {
+                const el = Date.now() - state.startMs;
+                const s = Math.floor(el / 1000);
+                document.getElementById('timer-display').innerText = `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+            }, 1000);
+        };
+
+        const renderQuestion = () => {
+            const q = QUESTIONS[state.idx];
+            document.getElementById('current-q-index').innerText = `Câu ${state.idx + 1}/${QUESTIONS.length}`;
+            document.getElementById('display-q-text').innerText = q.text;
+            document.getElementById('feedback').classList.add('hidden');
+            document.getElementById('btn-submit').disabled = false;
+            const zone = document.getElementById('answer-zone');
+            zone.innerHTML = ''; state.ans = null;
+
+            if (q.type === 'mcq') {
+                q.options.forEach((opt, i) => {
+                    const b = document.createElement('button');
+                    b.className = 'w-full p-4 bg-white border-2 border-slate-100 rounded-2xl text-left hover:border-sky-300 transition-all q-opt flex items-center shadow-sm text-sm font-medium';
+                    b.innerHTML = `<span class="w-6 h-6 rounded-full bg-sky-50 flex items-center justify-center mr-3 text-[10px] font-bold text-sky-600">${String.fromCharCode(65+i)}</span><span class="flex-1">${opt}</span>`;
+                    b.onclick = () => {
+                        state.ans = i.toString();
+                        document.querySelectorAll('.q-opt').forEach(x => x.classList.remove('border-sky-400', 'bg-sky-50'));
+                        b.classList.add('border-sky-400', 'bg-sky-50');
+                    };
+                    zone.appendChild(b);
+                });
+            } else {
+                zone.innerHTML = `<input type="text" id="short-answer-input" placeholder="Nhập đáp án (VD: 24)..." class="w-full p-5 bg-sky-50 border-2 border-sky-100 rounded-2xl text-slate-800 text-center focus:border-sky-400 outline-none text-lg font-bold shadow-inner">`;
+            }
+            
+            // Trigger MathJax typeset
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise();
+            }
+        };
+
+        window.submitAnswer = () => {
+            const q = QUESTIONS[state.idx];
+            let isCorrect = false;
+            if (q.type === 'mcq') {
+                if (state.ans === null) return;
+                isCorrect = state.ans === q.answer;
+            } else {
+                const val = document.getElementById('short-answer-input').value.trim().replace(',', '.');
+                if (!val) return;
+                isCorrect = val.toLowerCase() === q.answer.toLowerCase();
+            }
+
+            const fb = document.getElementById('feedback');
+            fb.classList.remove('hidden');
+            document.getElementById('btn-submit').disabled = true;
+
+            if (isCorrect) {
+                state.score += 10;
+                fb.innerText = "ĐÚNG RỒI! 🌟";
+                fb.className = "mt-3 text-center font-bold text-base p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 animate-fade";
+                revealTiles();
+            } else {
+                fb.innerText = `SAI RỒI! ĐÁP ÁN ĐÚNG LÀ: ${q.type === 'mcq' ? q.options[q.answer] : q.answer}`;
+                fb.className = "mt-3 text-center font-bold text-base p-3 rounded-xl bg-rose-50 text-rose-600 border border-rose-100";
+            }
+            
+            // Re-render LaTeX in feedback if needed
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise();
+            }
+
+            setTimeout(() => {
+                if (state.idx < QUESTIONS.length - 1) {
+                    state.idx++; renderQuestion();
+                } else {
+                    finishGame();
+                }
+            }, 2500);
+        };
+
+        const revealTiles = () => {
+            const num = 5; 
+            let c = 0;
+            const t = setInterval(() => {
+                if (c >= num || state.order.length === 0) {
+                    clearInterval(t); updateTileStatus(); return;
+                }
+                const i = state.order.pop();
+                const el = document.getElementById(`tile-${i}`);
+                if (el) el.classList.add('tile-revealed');
+                state.tilesRev++; c++;
+            }, 50);
+        };
+
+        const finishGame = async () => {
+            clearInterval(state.timer);
+            const ms = Date.now() - state.startMs;
+            const left = setInterval(() => {
+                if (state.order.length === 0) {
+                    clearInterval(left);
+                    document.getElementById('final-score').innerText = state.score;
+                    document.getElementById('final-time').innerText = document.getElementById('timer-display').innerText;
+                    document.getElementById('win-message').classList.remove('hidden');
+                    return;
+                }
+                const i = state.order.pop();
+                const el = document.getElementById(`tile-${i}`);
+                if (el) el.classList.add('tile-revealed');
+                state.tilesRev++; updateTileStatus();
+            }, 30);
+
+            if (auth.currentUser) {
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), {
+                        name: state.name, score: state.score, time: ms, timestamp: Date.now()
+                    });
+                    fetchLeaderboard();
+                } catch(e) {}
+            }
+        };
+
+        const fetchLeaderboard = async () => {
+            try {
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'));
+                let d = []; snap.forEach(doc => d.push(doc.data()));
+                d.sort((a, b) => b.score - a.score || a.time - b.time);
+                document.getElementById('leaderboard-body').innerHTML = d.slice(0, 5).map((it, i) => `
+                    <div class="flex justify-between items-center p-2 rounded-xl bg-slate-50 border border-slate-100 mb-1">
+                        <span class="text-[10px] font-bold text-slate-700">${i+1}. ${it.name}</span>
+                        <span class="text-sky-600 font-bold text-[10px]">${it.score}đ</span>
+                    </div>`).join('');
+            } catch(e) {}
+        };
+
+        const updateTileStatus = () => {
+            document.getElementById('tiles-status').innerText = `${state.tilesRev}/100`;
+        };
+
+        window.onload = () => lucide.createIcons();
+    </script>
+</body>
+</html>
